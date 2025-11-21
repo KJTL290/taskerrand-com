@@ -21,12 +21,16 @@ uvicorn main:app --reload
 
 ## Database
 
-The application uses SQLite by default for development. The database file `taskerrand.db` will be created automatically on first run.
+The backend now targets **MySQL** (compatible with XAMPP/MariaDB) by default using the connection string `mysql+pymysql://root:@localhost/taskerrand_db`.
 
-For production, set the `DATABASE_URL` environment variable to use PostgreSQL:
+1. Import `mysql_schema.sql` into phpMyAdmin (or run via the MySQL client) to create the `taskerrand_db` schema and tables.
+2. If your MySQL root user has a password or you prefer a different database/user, update the `DATABASE_URL` environment variable accordingly:
+
 ```bash
-export DATABASE_URL=postgresql://user:password@localhost/taskerrand
+set DATABASE_URL=mysql+pymysql://username:password@localhost/taskerrand_db
 ```
+
+Other SQLAlchemy-compatible databases (SQLite, PostgreSQL, etc.) still work—just point `DATABASE_URL` to the appropriate URI.
 
 ## API Documentation
 
@@ -43,5 +47,5 @@ Authorization: Bearer <firebase_id_token>
 
 ## Environment Variables
 
-- `DATABASE_URL`: Database connection string (default: sqlite:///./taskerrand.db)
+- `DATABASE_URL`: Database connection string (default: mysql+pymysql://root:@localhost/taskerrand_db)
 

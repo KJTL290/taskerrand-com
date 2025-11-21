@@ -45,7 +45,7 @@ async function loadTasks() {
                 <p>${task.description.substring(0, 150)}${task.description.length > 150 ? '...' : ''}</p>
                 <div class="task-meta">
                     <span class="task-status status-${task.status}">${task.status}</span>
-                    <span><strong>$${task.payment.toFixed(2)}</strong></span>
+                    <span><strong>₱${task.payment.toFixed(2)}</strong></span>
                 </div>
                 ${task.location_address ? `<p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">📍 ${task.location_address}</p>` : ''}
             </div>

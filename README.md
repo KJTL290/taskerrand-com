@@ -24,7 +24,7 @@ A comprehensive web-based platform that allows users to post, find, and accept s
 - Python 3.8+
 - FastAPI
 - SQLAlchemy (ORM)
-- SQLite (development) / PostgreSQL (production)
+- MySQL (XAMPP-ready) via PyMySQL driver
 
 ## Setup Instructions
 
@@ -51,7 +51,17 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Run the backend server:
+4. Provision MySQL:
+   - Start Apache + MySQL from XAMPP.
+   - Open phpMyAdmin and create a database named `taskerrand_db`.
+   - Import `backend/mysql_schema.sql` to create all tables.
+
+5. (Optional) If you use a custom MySQL user/password, set `DATABASE_URL` before running:
+```bash
+set DATABASE_URL=mysql+pymysql://username:password@localhost/taskerrand_db
+```
+
+6. Run the backend server:
 ```bash
 python main.py
 ```

@@ -106,10 +106,10 @@ async function loadAllTasks(statusFilter = null) {
                 <p>${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</p>
                 <div class="task-meta">
                     <span class="task-status status-${task.status}">${task.status.replace('_', ' ')}</span>
-                    <span><strong>$${task.payment.toFixed(2)}</strong></span>
+                    <span><strong>₱${task.payment.toFixed(2)}</strong></span>
                 </div>
                 <div style="margin-top: 1rem;">
-                    <a href="./task-detail.html?id=${task.id}" class="btn btn-outline" style="margin-right: 0.5rem;">View</a>
+                    <a href="./task-detail.html?id=${task.id}" class="btn btn-primary" style="margin-right: 0.5rem;">View</a>
                     <button class="btn btn-danger" onclick="deleteTask(${task.id})">Delete</button>
                 </div>
             </div>

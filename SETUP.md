@@ -25,7 +25,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. Start the server:
+4. Prepare MySQL (XAMPP):
+   - Start MySQL from XAMPP Control Panel.
+   - In phpMyAdmin, create a database named `taskerrand_db`.
+   - Import `backend/mysql_schema.sql`.
+   - If you use a custom MySQL password, set the `DATABASE_URL` env var to `mysql+pymysql://username:password@localhost/taskerrand_db`.
+
+5. Start the server:
 ```bash
 python main.py
 ```

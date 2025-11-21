@@ -110,7 +110,7 @@ async function loadMyTasks() {
                     <p>${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</p>
                     <div class="task-meta">
                         <span class="task-status status-${task.status}">${task.status.replace('_', ' ')}</span>
-                        <span><strong>$${task.payment.toFixed(2)}</strong></span>
+                        <span><strong>₱${task.payment.toFixed(2)}</strong></span>
                     </div>
                 </div>
             `).join('');

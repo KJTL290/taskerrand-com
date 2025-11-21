@@ -14,6 +14,99 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #111;
+        }
+
+        body {
+            background-image: url("images/background1.jpg");
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        body::before { content: ""; position: fixed; inset: 0; background: rgba(58,58,58,0.35); z-index: 0; pointer-events: none; }
+
+        header, main, footer { position: relative; z-index: 1; }
+
+        header nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background: rgba(0,0,0,0.25); backdrop-filter: blur(4px); border-bottom: 1px solid rgba(255,255,255,0.06); box-sizing: border-box; min-height:64px; }
+        header nav h1 { margin: 0; font-size: 1.25rem; color: #fff; }
+
+        .nav-links { list-style:none; display:flex; gap:1rem; align-items:center; margin:0; padding:0; }
+        .nav-links li { display:flex; align-items:center; }
+        .nav-links a { color: #fff; text-decoration:none; padding:0.35rem 0.6rem; border-radius:4px; display:inline-block; transition: background .12s ease, transform .12s ease; }
+        /* Hover: slightly darker background and a small scale-up */
+        .nav-links a:hover { background: rgba(0,0,0,0.12); transform: translateY(-2px) scale(1.04); }
+
+        .user-info { display:flex; align-items:center; gap:0.5rem; }
+        #profile { width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.15); }
+
+        main { padding:2rem; min-height: calc(100vh - 140px); }
+
+        .container { max-width:1100px; margin:1rem auto; background: rgba(255,255,255,0.96); color:#111; padding:1rem 1.25rem; border-radius:8px; box-shadow:0 8px 30px rgba(10,10,10,0.08); }
+
+        h2,h3 { color:#111; }
+
+        .task-status { padding:0.25rem 0.5rem; border-radius:999px; font-size:0.85rem; text-transform:capitalize; border:1px solid rgba(0,0,0,0.06); }
+        .status-ongoing{ background: rgba(255,193,7,0.12); color:#8a6a00; }
+        .status-pending{ background: rgba(33,150,243,0.10); color:#0b63a8; }
+        .status-completed{ background: rgba(76,175,80,0.10); color:#2e7d32; }
+        .status-cancelled{ background: rgba(244,67,54,0.10); color:#b71c1c; }
+
+        /* chat styles */
+        .chat-container { display:flex; flex-direction:column; gap:0.5rem; }
+        .chat-messages { max-height: 300px; overflow:auto; padding:0.5rem; border:1px solid #e6e7ea; border-radius:6px; background:#fff; }
+        .chat-input { display:flex; gap:0.5rem; margin-top:0.5rem; }
+        .chat-input input { flex:1; padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; }
+
+        .message { padding:0.5rem; margin-bottom:0.4rem; border-radius:8px; max-width:80%; }
+        .message.sent { background:#2563eb; color:#fff; margin-left:auto; }
+        .message.received { background:#f3f4f6; color:#111; }
+        .message-time { font-size:0.8rem; color:#6b7280; margin-top:0.25rem; }
+
+        /* Button styles used by task actions */
+        .btn { display: inline-block; padding: 0.5rem 0.85rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: transform .08s ease, box-shadow .08s ease; }
+        .btn:active { transform: translateY(1px); }
+
+        /* Primary: Accept / primary actions (blue) */
+        .btn-primary { background: #2563eb; color: #fff; border-color: rgba(37,99,235,0.15); box-shadow: 0 8px 20px rgba(37,99,235,0.12); }
+        .btn-primary:hover { background:#1e4fd8; }
+
+        /* Secondary mapped to success for this page: Mark as Complete / Confirm (green) */
+        .btn-secondary { background: #16a34a; color: #fff; border-color: rgba(22,163,74,0.12); box-shadow: 0 8px 20px rgba(16,163,74,0.10); }
+        .btn-secondary:hover { background:#13823d; }
+
+        /* Danger: Cancel (red) */
+        .btn-danger { background: #dc2626; color: #fff; border-color: rgba(220,38,38,0.12); box-shadow: 0 8px 20px rgba(220,38,38,0.10); }
+        .btn-danger:hover { background:#b91c1c; }
+
+        .loading { color:#444; }
+
+        footer { text-align:center; padding:1rem; color: rgba(0,0,0,0.7); position:relative; z-index:1; }
+
+        @media (max-width:680px) { header nav{ padding:0.75rem 1rem; flex-direction:column; gap:0.5rem; } main{ padding:1rem; } .container{ margin:0.75rem; padding:0.75rem;} .chat-messages{ max-height:220px;} }
+    
+        /* Default styling for action buttons, but do not override explicit color classes */
+        #action-buttons .btn:not(.btn-primary):not(.btn-secondary):not(.btn-danger):not(.btn-outline) {
+            border: none;
+            background-color: rgb(210, 219, 221);
+            margin-right: 0.5rem;
+            margin-top: 0.5rem;
+            padding: 10px;
+            color: #111;
+        }
+
+        #action-buttons .btn:not(.btn-primary):not(.btn-secondary):not(.btn-danger):not(.btn-outline):hover {
+            background-color: rgb(170, 190, 195);
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -39,8 +132,14 @@
         </div>
         
         <div class="container" id="actions-container" style="display: none;">
-            <h3>Actions</h3>
+            <h3>Action</h3>
             <div id="action-buttons"></div>
+        </div>
+
+        <div class="container" id="feedback-container" style="display: none;">
+            <h3>Feedback & Rating</h3>
+            <div id="feedback-content"></div>
+            <div id="seeker-rating-summary" style="margin-top: 1rem;"></div>
         </div>
         
         <div class="container" id="chat-container" style="display: none;">
@@ -54,6 +153,10 @@
             </div>
         </div>
     </main>
+    <footer>
+        <p>&copy; 2025 Taskerrand. All rights reserved.</p>
+    </footer>
+    
 </body>
 </html>
 

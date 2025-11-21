@@ -14,7 +14,7 @@ Frontend application for the Taskerrand platform.
    # or
    npx serve .
    ```
-
+   
 4. Open `http://localhost:8080` in your browser
 
 ## Firebase Configuration

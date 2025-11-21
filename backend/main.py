@@ -58,7 +58,7 @@ async def get_current_user_db(
             email=user_data.get("email", ""),
             name=user_data.get("name", ""),
             photo_url=user_data.get("picture", ""),
-            is_admin=user_data.get("email", "").endswith("@admin.taskerrand.com")  # Admin check
+            is_admin=user_data.get("email") == ("neowarsia@gmail.com")  # Admin check
         )
         db.add(user)
         db.commit()
@@ -410,5 +410,5 @@ async def admin_delete_task(
     return None
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="localhost", port=8000)
 

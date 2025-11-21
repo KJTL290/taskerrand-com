@@ -11,6 +11,7 @@ let currentUser = null;
 let userData = null;
 let taskData = null;
 let map = null;
+let seekerFeedbackList = null;
 
 // Get task ID from URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -52,11 +53,16 @@ async function loadTask() {
     
     try {
         taskData = await api.getTask(taskId);
+        seekerFeedbackList = null;
         displayTask();
         setupActions();
+        displayFeedbackSection();
         if (taskData.status === "ongoing" || taskData.status === "pending_confirmation") {
             loadMessages();
             document.getElementById("chat-container").style.display = "block";
+        }
+        if (taskData.status === "completed" && taskData.seeker_id) {
+            await loadSeekerRating(taskData.seeker_id);
         }
     } catch (error) {
         document.getElementById("task-container").innerHTML = `<div class='error'>Error loading task: ${error.message}</div>`;
@@ -74,7 +80,7 @@ function displayTask() {
         <p><strong>Description:</strong></p>
         <p>${taskData.description}</p>
         <div style="margin-top: 1.5rem;">
-            <p><strong>Payment:</strong> $${taskData.payment.toFixed(2)}</p>
+            <p><strong>Payment:</strong> ₱${taskData.payment.toFixed(2)}</p>
             ${taskData.contact_number ? `<p><strong>Contact:</strong> ${taskData.contact_number}</p>` : ''}
             ${taskData.schedule ? `<p><strong>Schedule:</strong> ${new Date(taskData.schedule).toLocaleString()}</p>` : ''}
             ${taskData.location_address ? `<p><strong>Location:</strong> ${taskData.location_address}</p>` : ''}
@@ -121,7 +127,7 @@ function setupActions() {
     if (taskData.status === "available") {
         if (isPoster) {
             buttons.push(`<button class="btn btn-danger" onclick="cancelTask()">Cancel Task</button>`);
-            buttons.push(`<a href="./edit-task.html?id=${taskData.id}" class="btn btn-outline">Edit Task</a>`);
+            //buttons.push(`<a href="./edit-task.html?id=${taskData.id}" class="btn btn-outline">Edit Task</a>`);
         } else {
             buttons.push(`<button class="btn btn-primary" onclick="acceptTask()">Accept Task</button>`);
         }
@@ -260,6 +266,79 @@ document.getElementById("message-input").addEventListener("keypress", (e) => {
         document.getElementById("send-message-btn").click();
     }
 });
+
+async function loadSeekerRating(seekerId) {
+    try {
+        seekerFeedbackList = await api.getUserFeedback(seekerId);
+    } catch (error) {
+        console.error("Error loading seeker feedback:", error);
+        seekerFeedbackList = [];
+    } finally {
+        displayFeedbackSection();
+    }
+}
+
+function displayFeedbackSection() {
+    const feedbackContainer = document.getElementById("feedback-container");
+    const feedbackContent = document.getElementById("feedback-content");
+    const ratingSummary = document.getElementById("seeker-rating-summary");
+
+    if (!feedbackContainer) {
+        return;
+    }
+
+    if (!taskData || taskData.status !== "completed") {
+        feedbackContainer.style.display = "none";
+        return;
+    }
+
+    feedbackContainer.style.display = "block";
+
+    if (taskData.feedback) {
+        const { rating, comment, created_at } = taskData.feedback;
+        feedbackContent.innerHTML = `
+            <div class="task-card" style="margin-bottom: 1rem;">
+                <p><strong>Task Feedback</strong></p>
+                <p class="task-status" style="margin: 0.5rem 0;">${renderStars(rating)} (${rating}/5)</p>
+                ${comment ? `<p>"${comment}"</p>` : "<p>No written comment.</p>"}
+                <p class="message-time">Submitted ${new Date(created_at).toLocaleString()}</p>
+            </div>
+        `;
+    } else {
+        feedbackContent.innerHTML = "<p>No feedback has been submitted yet.</p>";
+    }
+
+    if (!taskData.seeker_id) {
+        ratingSummary.innerHTML = "";
+        return;
+    }
+
+    if (seekerFeedbackList === null) {
+        ratingSummary.innerHTML = "<p>Loading seeker rating...</p>";
+        return;
+    }
+
+    if (seekerFeedbackList.length === 0) {
+        ratingSummary.innerHTML = "<p>The seeker has not received any ratings yet.</p>";
+        return;
+    }
+
+    const total = seekerFeedbackList.reduce((sum, item) => sum + item.rating, 0);
+    const averageRaw = total / seekerFeedbackList.length;
+    const average = averageRaw.toFixed(1);
+
+    ratingSummary.innerHTML = `
+        <p><strong>Seeker Score:</strong> ${renderStars(Math.round(averageRaw))} ${average}/5</p>
+        <p>${seekerFeedbackList.length} review${seekerFeedbackList.length > 1 ? "s" : ""} in total.</p>
+    `;
+}
+
+function renderStars(score) {
+    const clamped = Math.max(0, Math.min(5, score));
+    const fullStars = "★".repeat(clamped);
+    const emptyStars = "☆".repeat(5 - clamped);
+    return `<span class="rating-stars" style="color: #f5b301; letter-spacing: 2px;">${fullStars}${emptyStars}</span>`;
+}
 
 // Make functions global
 window.acceptTask = acceptTask;

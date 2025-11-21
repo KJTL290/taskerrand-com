@@ -9,16 +9,41 @@ class UserBase(BaseModel):
     photo_url: Optional[str] = None
     phone: Optional[str] = None
 
+
 class UserCreate(UserBase):
     firebase_uid: str
+
 
 class UserResponse(UserBase):
     id: int
     is_admin: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
+
+# Feedback Schemas
+class FeedbackBase(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+
+
+class FeedbackCreate(FeedbackBase):
+    task_id: int
+    seeker_id: int
+
+
+class FeedbackResponse(FeedbackBase):
+    id: int
+    task_id: int
+    poster_id: int
+    seeker_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 
 # Task Schemas
 class TaskBase(BaseModel):
@@ -31,8 +56,10 @@ class TaskBase(BaseModel):
     location_address: Optional[str] = None
     schedule: Optional[datetime] = None
 
+
 class TaskCreate(TaskBase):
     pass
+
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -45,6 +72,7 @@ class TaskUpdate(BaseModel):
     schedule: Optional[datetime] = None
     status: Optional[str] = None
 
+
 class TaskResponse(TaskBase):
     id: int
     status: str
@@ -54,42 +82,27 @@ class TaskResponse(TaskBase):
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-    
+    feedback: Optional[FeedbackResponse] = None
+
     class Config:
         from_attributes = True
+
 
 # Message Schemas
 class MessageBase(BaseModel):
     content: str
 
+
 class MessageCreate(MessageBase):
     task_id: int
+
 
 class MessageResponse(MessageBase):
     id: int
     task_id: int
     sender_id: int
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
-# Feedback Schemas
-class FeedbackBase(BaseModel):
-    rating: int
-    comment: Optional[str] = None
-
-class FeedbackCreate(FeedbackBase):
-    task_id: int
-    seeker_id: int
-
-class FeedbackResponse(FeedbackBase):
-    id: int
-    task_id: int
-    poster_id: int
-    seeker_id: int
-    created_at: datetime
-    
     class Config:
         from_attributes = True
 

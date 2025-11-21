@@ -216,6 +216,7 @@ async function searchAddress(query) {
 }
 
 // Form submission
+/*
 document.getElementById("task-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     
@@ -231,7 +232,10 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
         location_lng: parseFloat(document.getElementById("location_lng").value),
         location_address: document.getElementById("location_address").value || null,
         schedule: document.getElementById("schedule").value ? new Date(document.getElementById("schedule").value).toISOString() : null
+
     };
+
+
     
     if (!formData.location_lat || !formData.location_lng) {
         errorDiv.innerHTML = "<div class='error'>Please select a location on the map</div>";
@@ -245,7 +249,162 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
     } catch (error) {
         errorDiv.innerHTML = `<div class='error'>Error: ${error.message}</div>`;
     }
+}); 
+*/
+// Form submission
+/*
+document.getElementById("task-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const errorDiv = document.getElementById("error-message");
+    errorDiv.innerHTML = "";
+
+    // Get raw values first
+    const title = document.getElementById("title").value;
+    const description = document.getElementById("description").value;
+    const payment = document.getElementById("payment").value;
+    const contactRaw = document.getElementById("contact_number").value;
+    const lat = document.getElementById("location_lat").value;
+    const lng = document.getElementById("location_lng").value;
+    const address = document.getElementById("location_address").value;
+    const scheduleRaw = document.getElementById("schedule").value;
+
+    // ------------------- REQUIRED FIELD CHECK -------------------
+    if (!title || !description || !payment || !contact || !lat || !lng || !address || !scheduleRaw) {
+        errorDiv.innerHTML = "<div class='error'>All fields are required</div>";
+        return;
+    }
+
+    // ------------------- DATE VALIDATION -------------------
+    const selectedDate = new Date(scheduleRaw);
+    const now = new Date();
+
+    if (selectedDate < now) {
+        errorDiv.innerHTML = "<div class='error'>The selected schedule cannot be in the past</div>";
+        return;
+    }
+
+    // ------------------- CREATE FORM DATA -------------------
+    const formData = {
+        title,
+        description,
+        payment: parseFloat(payment),
+        contact_number: contact,
+        location_lat: parseFloat(lat),
+        location_lng: parseFloat(lng),
+        location_address: address,
+        schedule: selectedDate.toISOString()
+    };
+
+    // ------------------- SUBMIT DATA -------------------
+    try {
+        await api.createTask(formData);
+        alert("Task posted successfully!");
+        window.location.href = "./dashboard.html";
+    } catch (error) {
+        errorDiv.innerHTML = `<div class='error'>Error: ${error.message}</div>`;
+    }
 });
+*/
+
+// Form submission
+document.getElementById("task-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const errorDiv = document.getElementById("error-message");
+    errorDiv.innerHTML = "";
+    errorDiv.classList.remove("error-shake");
+
+    const title = document.getElementById("title").value;
+    const description = document.getElementById("description").value;
+    const payment = document.getElementById("payment").value;
+    const contactRaw = document.getElementById("contact_number").value;
+    const lat = document.getElementById("location_lat").value;
+    const lng = document.getElementById("location_lng").value;
+    const address = document.getElementById("location_address").value;
+    const scheduleRaw = document.getElementById("schedule").value;
+
+    // Required fields
+    if (!title || !description || !payment || !contactRaw || !lat || !lng || !address || !scheduleRaw) {
+        errorDiv.innerHTML = "<div class='error'>All fields are required</div>";
+
+        // shake effect
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+
+        return;
+    }
+
+    // Ensure contact contains only digits and meets minimal length
+    const contact = contactRaw.replace(/\D/g, '');
+    if (contact !== contactRaw) {
+        errorDiv.innerHTML = "<div class='error'>Contact number must contain digits only.</div>";
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+        return;
+    }
+
+    if (contact.length < 7) {
+        errorDiv.innerHTML = "<div class='error'>Please enter a valid contact number (at least 7 digits).</div>";
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+        return;
+    }
+
+    // Date check
+    // Validate schedule format: ensure year is 4 digits and date is valid
+    // Typical datetime-local value: YYYY-MM-DDThh:mm (seconds optional on some browsers)
+    const yearPart = scheduleRaw.substring(0, 4);
+    if (!/^[0-9]{4}$/.test(yearPart)) {
+        errorDiv.innerHTML = "<div class='error'>Please use a valid date with a 4-digit year (YYYY). Remove any extra digits from the year.</div>";
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+        return;
+    }
+
+    const selectedDate = new Date(scheduleRaw);
+    const now = new Date();
+
+    // Check for invalid Date (e.g., malformed input)
+    if (isNaN(selectedDate.getTime())) {
+        errorDiv.innerHTML = "<div class='error'>The provided schedule is invalid. Please pick a valid date and time.</div>";
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+        return;
+    }
+
+    if (selectedDate < now) {
+        errorDiv.innerHTML = "<div class='error'>The selected date and time cannot be in the past</div>";
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+        return;
+    }
+
+    const formData = {
+        title,
+        description,
+        payment: parseFloat(payment),
+        contact_number: contact,
+        location_lat: parseFloat(lat),
+        location_lng: parseFloat(lng),
+        location_address: address,
+        schedule: selectedDate.toISOString()
+    };
+
+    try {
+        await api.createTask(formData);
+        alert("Task posted successfully!");
+        window.location.href = "./dashboard.html";
+    } catch (error) {
+        errorDiv.innerHTML = `<div class='error'>Error: ${error.message}</div>`;
+
+        // shake effect
+        void errorDiv.offsetWidth;
+        errorDiv.classList.add("error-shake");
+    }
+});
+
+
 
 // Logout
 const logoutBtn = document.getElementById("google-logout-btn-id");
