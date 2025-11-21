@@ -251,12 +251,16 @@ async def cancel_task(
     elif task.status == "ongoing":
         if task.poster_id != current_user.id and task.seeker_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized to cancel this task")
+        # If the seeker cancels an ongoing task, make it available again for others.
+        # If the poster cancels an ongoing task, mark it as cancelled.
+        if current_user.id == task.seeker_id and task.poster_id != task.seeker_id:
+            task.status = "available"
+        else:
+            task.status = "cancelled"
+        task.seeker_id = None
+        task.accepted_at = None
     else:
         raise HTTPException(status_code=400, detail="Cannot cancel task in current status")
-    
-    task.status = "cancelled"
-    task.seeker_id = None
-    task.accepted_at = None
     
     db.commit()
     db.refresh(task)

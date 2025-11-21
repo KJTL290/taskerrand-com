@@ -46,7 +46,10 @@ class Task(Base):
     poster = relationship("User", foreign_keys=[poster_id], back_populates="posted_tasks")
     seeker = relationship("User", foreign_keys=[seeker_id], back_populates="accepted_tasks")
     messages = relationship("Message", back_populates="task", cascade="all, delete-orphan")
-    feedback = relationship("Feedback", back_populates="task", uselist=False)
+    # Let the database's ON DELETE CASCADE handle removing feedback rows.
+    # Using passive_deletes=True prevents SQLAlchemy from issuing an UPDATE
+    # that sets task_id=NULL (which fails because task_id is non-nullable).
+    feedback = relationship("Feedback", back_populates="task", uselist=False, passive_deletes=True)
 
 class Message(Base):
     __tablename__ = "messages"
