@@ -291,7 +291,7 @@ async function loadMessages() {
         // Render messages with sender name and modern chat alignment
         const rendered = await Promise.all(messages.map(async (msg) => {
             const isSent = String(msg.sender_id) === String(userData.id);
-            const time = new Date(msg.created_at).toLocaleTimeString();
+            const time = formatLocalDateTime(msg.created_at, { dateOnly: false });
             // get sender name from cache or API
             let senderName = userCache[msg.sender_id];
             if (!senderName) {
@@ -389,7 +389,7 @@ async function displayFeedbackSection() {
                 <p style="margin:0.25rem 0;"><strong>From:</strong> ${posterName || 'Poster'} &nbsp; <strong>To:</strong> ${seekerName || 'Seeker'}</p>
                 <p class="task-status" style="margin: 0.5rem 0;">${renderStars(rating)} (${rating}/5)</p>
                 ${comment ? `<p>"${comment}"</p>` : "<p>No written comment.</p>"}
-                <p class="message-time">Submitted ${new Date(created_at).toLocaleString()}</p>
+                <p class="message-time">Submitted ${formatLocalDateTime(created_at, { dateOnly: false })}</p>
             </div>
         `;
     } else {
@@ -426,6 +426,63 @@ function renderStars(score) {
     const fullStars = "★".repeat(clamped);
     const emptyStars = "☆".repeat(5 - clamped);
     return `<span class="rating-stars" style="color: #f5b301; letter-spacing: 2px;">${fullStars}${emptyStars}</span>`;
+}
+
+// Parse various timestamp formats and return a Date object normalized to user's local timezone
+function parseTimestampToDate(ts) {
+    if (!ts) return new Date(NaN);
+
+    // If number (seconds or milliseconds)
+    if (typeof ts === 'number') {
+        // If looks like seconds (10 digits), convert to ms
+        if (ts.toString().length === 10) return new Date(ts * 1000);
+        return new Date(ts);
+    }
+
+    // If it's already a Date
+    if (ts instanceof Date) return ts;
+
+    // Trim
+    let s = String(ts).trim();
+
+    // If pure digits (epoch seconds or ms)
+    if (/^\d{10}$/.test(s)) return new Date(parseInt(s, 10) * 1000);
+    if (/^\d{13}$/.test(s)) return new Date(parseInt(s, 10));
+
+    // Replace space between date and time with 'T' to help Date parser
+    // e.g. '2025-12-02 13:00:00' -> '2025-12-02T13:00:00'
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:?\d{0,2}/.test(s)) {
+        s = s.replace(' ', 'T');
+        // If no timezone offset or Z present, assume backend stored as UTC and append 'Z'
+        if (!/[zZ]|[+\-]\d{2}:?\d{2}$/.test(s)) {
+            s = s + 'Z';
+        }
+        return new Date(s);
+    }
+
+    // If ISO-like but missing 'T' between date and time
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
+        // If no timezone info, assume UTC (append Z) to normalize
+        if (!/[zZ]|[+\-]\d{2}:?\d{2}$/.test(s)) {
+            s = s + 'Z';
+        }
+        return new Date(s);
+    }
+
+    // Fallback to Date constructor
+    return new Date(s);
+}
+
+function formatLocalDateTime(ts, opts = {}) {
+    const date = parseTimestampToDate(ts);
+    if (isNaN(date.getTime())) return '';
+    // Default to show date+time if requested; otherwise time only
+    const { dateOnly = false } = opts;
+    if (dateOnly) {
+        return date.toLocaleDateString();
+    }
+    // Show local time with hour:minute and short date for context
+    return date.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 // Make functions global
