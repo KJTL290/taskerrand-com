@@ -129,7 +129,7 @@ function displayTask() {
     
     container.innerHTML = `
         <h2>Title: ${taskData.title}</h2>
-        ${taskData.poster_id ? `<div class="task-creator">Created by: ${userCache[taskData.poster_id] || 'Unknown'}</div>` : ''}
+        ${taskData.poster_id ? `<div class="task-creator">Created by: <a class="creator-link" href="./other-users-dashboard.html?user_id=${taskData.poster_id}">${userCache[taskData.poster_id] || 'Unknown'}</a></div>` : ''}
         <div style="margin-bottom: 1rem;">
             <span class="task-status status-${taskData.status}">Status: ${taskData.status.replace('_', ' ')}</span>
         </div>

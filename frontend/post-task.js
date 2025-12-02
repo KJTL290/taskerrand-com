@@ -403,6 +403,82 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
 */
 
 // Form submission
+// Prevent non-numeric/exponential characters in payment field and sanitize decimals
+const paymentInput = document.getElementById('payment');
+if (paymentInput) {
+    paymentInput.setAttribute('inputmode', 'decimal');
+    paymentInput.addEventListener('keydown', (ev) => {
+        // Prevent entering exponential notation and plus/minus signs
+        if (ev.key === 'e' || ev.key === 'E' || ev.key === '+' || ev.key === '-') {
+            ev.preventDefault();
+        }
+    });
+    paymentInput.addEventListener('input', (ev) => {
+        let v = ev.target.value;
+        // Allow only digits and decimal point
+        v = v.replace(/[^0-9.]/g, '');
+        // Keep only first decimal point
+        const parts = v.split('.');
+        if (parts.length > 2) {
+            v = parts[0] + '.' + parts.slice(1).join('');
+        }
+        // Limit to two decimal places if present
+        if (v.indexOf('.') >= 0) {
+            const [intPart, decPart] = v.split('.');
+            ev.target.value = intPart + '.' + (decPart ? decPart.slice(0, 2) : '');
+        } else {
+            ev.target.value = v;
+        }
+    });
+}
+
+// Enforce schedule input format: limit year to 4 digits and time to HH:MM
+const scheduleInput = document.getElementById('schedule');
+if (scheduleInput) {
+    scheduleInput.addEventListener('input', (ev) => {
+        let v = ev.target.value || '';
+
+        // Split date and time (datetime-local uses 'T')
+        const parts = v.split('T');
+        const datePart = parts[0] || '';
+        const timePartRaw = parts[1] || '';
+
+        // Date part should be YYYY-MM-DD; ensure year <= 4 digits, month/day <=2
+        const dateSegments = datePart.split('-');
+        const year = (dateSegments[0] || '').slice(0, 4);
+        const month = (dateSegments[1] || '').slice(0, 2);
+        const day = (dateSegments[2] || '').slice(0, 2);
+
+        const newDate = [year].concat(month ? [month] : [], day ? [day] : []).join('-');
+
+        // Time part should be HH:MM (ignore seconds); limit to 5 chars
+        const time = timePartRaw.slice(0, 5);
+
+        const newValue = newDate + (time ? ('T' + time) : '');
+        if (newValue !== v) {
+            ev.target.value = newValue;
+        }
+    });
+
+    // Sanitize pasted values into expected datetime-local format
+    scheduleInput.addEventListener('paste', (ev) => {
+        ev.preventDefault();
+        const text = (ev.clipboardData || window.clipboardData).getData('text') || '';
+        // reuse input handler logic
+        const parts = text.trim().split('T');
+        const datePart = parts[0] || '';
+        const timePartRaw = parts[1] || '';
+        const dateSegments = datePart.split('-');
+        const year = (dateSegments[0] || '').slice(0, 4);
+        const month = (dateSegments[1] || '').slice(0, 2);
+        const day = (dateSegments[2] || '').slice(0, 2);
+        const newDate = [year].concat(month ? [month] : [], day ? [day] : []).join('-');
+        const time = timePartRaw.slice(0, 5);
+        const newValue = newDate + (time ? ('T' + time) : '');
+        scheduleInput.value = newValue;
+    });
+}
+
 document.getElementById("task-form").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -448,10 +524,9 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
         return;
     }
 
-    // Date validation
-    const yearPart = scheduleRaw.substring(0, 4);
-    if (!/^[0-9]{4}$/.test(yearPart)) {
-        showError("<div class='error'>Please use a valid date with a 4-digit year (YYYY).</div>");
+    // Date validation: enforce exact datetime-local format with 4-digit year
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/.test(scheduleRaw)) {
+        showError("<div class='error'>Please use a valid date and time with a 4-digit year (YYYY-MM-DDTHH:MM).</div>");
         return;
     }
 
