@@ -100,20 +100,28 @@ async function loadAllTasks(statusFilter = null) {
             return;
         }
         
-        container.innerHTML = tasks.map(task => `
+        const rendered = await Promise.all(tasks.map(async (task) => {
+            let posterName = 'Unknown';
+            try { const u = await api.getUser(task.poster_id); posterName = u.name || u.email || posterName; } catch(e) {}
+            return `
             <div class="task-card">
-                <h3>${task.title}</h3>
-                <p>${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</p>
+                <h3>Title: ${task.title}</h3>
+                <div class="task-creator">Created by: ${posterName}</div>
+                <p>Description: ${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</p>
                 <div class="task-meta">
-                    <span class="task-status status-${task.status}">${task.status.replace('_', ' ')}</span>
+                    <span style="display: block" class="task-status status-${task.status}">Status: ${task.status.replace('_', ' ')}</span>
+                 
                     <span><strong>₱${task.payment.toFixed(2)}</strong></span>
                 </div>
-                <div style="margin-top: 1rem;">
-                    <a href="./task-detail.html?id=${task.id}" class="btn btn-primary" style="margin-right: 0.5rem;">View</a>
-                    <button class="btn btn-danger" onclick="deleteTask(${task.id})">Delete</button>
+                <div id="admin-tasks-buttons" style="margin-top: 1rem;">
+                    <a id="admin-view-task-btn" href="./task-detail.html?id=${task.id}" class="btn btn-primary" style="margin-right: 0.5rem; width:100px; ">View</a>
+                    <button id="admin-delete-task-btn" class="btn btn-danger" onclick="deleteTask(${task.id})">Delete</button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }));
+
+        container.innerHTML = rendered.join('');
     } catch (error) {
         console.error("Error loading tasks:", error);
         container.innerHTML = `<div class="error">Error loading tasks: ${error.message}</div>`;

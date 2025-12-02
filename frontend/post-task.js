@@ -10,6 +10,10 @@ const auth = getAuth(app);
 let map;
 let marker;
 let geocoderCache = {}; // Cache for geocoding results
+const urlParams = new URLSearchParams(window.location.search);
+const editTaskId = urlParams.get('id');
+const editMode = (urlParams.get('edit') === '1' || urlParams.get('edit') === 'true');
+let pendingMarkerCoords = null;
 
 // Check authentication
 onAuthStateChanged(auth, (user) => {
@@ -31,7 +35,76 @@ onAuthStateChanged(auth, (user) => {
     
     // Initialize map after DOM is ready
     setTimeout(initMap, 100);
+    // Check if we're editing an existing task and load it
+    setTimeout(() => {
+        if (editMode && editTaskId) {
+            checkEditMode();
+        }
+    }, 300);
 });
+
+async function checkEditMode() {
+    try {
+        const me = await api.getCurrentUser();
+        if (!me) return;
+        if (!editMode || !editTaskId) return;
+
+        const task = await api.getTask(editTaskId);
+        if (!task) return;
+
+        // Only allow the poster to edit (basic guard)
+        if (String(task.poster_id) !== String(me.id)) {
+            alert('You are not authorized to edit this task.');
+            window.location.href = './dashboard.html';
+            return;
+        }
+
+        // Pre-fill form
+        document.getElementById('title').value = task.title || '';
+        document.getElementById('description').value = task.description || '';
+        document.getElementById('payment').value = task.payment || '';
+        document.getElementById('contact_number').value = task.contact_number || '';
+        if (task.schedule) {
+            const d = new Date(task.schedule);
+            // format to YYYY-MM-DDThh:mm for datetime-local
+            const offset = d.getTimezoneOffset();
+            const local = new Date(d.getTime() - (offset*60000));
+            document.getElementById('schedule').value = local.toISOString().slice(0,16);
+        }
+        if (task.location_address) document.getElementById('location_address').value = task.location_address;
+        if (task.location_lat) document.getElementById('location_lat').value = task.location_lat;
+        if (task.location_lng) document.getElementById('location_lng').value = task.location_lng;
+
+        // Update UI: change button text and cancel link
+        const submitBtn = document.querySelector('.post-task-buttons-container .btn-primary');
+        if (submitBtn) submitBtn.textContent = 'Update Task';
+
+        const cancelLink = document.querySelector('.post-task-buttons-container .btn-outline');
+        if (cancelLink) cancelLink.href = `./task-detail.html?id=${editTaskId}`;
+
+        // If map already initialized, place marker
+        if (map && task.location_lat && task.location_lng) {
+            const lat = parseFloat(task.location_lat);
+            const lng = parseFloat(task.location_lng);
+            map.setView([lat, lng], 15);
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                marker.on('dragend', (e) => {
+                    const position = marker.getLatLng();
+                    updateLocationFromMarker([position.lat, position.lng]);
+                });
+            }
+        } else if (task.location_lat && task.location_lng) {
+            // If map not ready yet, store coords to apply later in initMap
+            pendingMarkerCoords = [parseFloat(task.location_lat), parseFloat(task.location_lng)];
+        }
+
+    } catch (error) {
+        console.error('Error loading task for edit:', error);
+    }
+}
 
 // Initialize Leaflet Map
 function initMap() {
@@ -115,6 +188,28 @@ function initMap() {
             }
         }
     });
+
+    // Apply pending marker coords if we loaded edit data before map init
+    applyPendingMarker();
+}
+
+// If we had pending marker coords from edit mode, apply them after map initialization
+function applyPendingMarker() {
+    if (pendingMarkerCoords && map) {
+        const [lat, lng] = pendingMarkerCoords;
+        map.setView([lat, lng], 15);
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            marker.on('dragend', (e) => {
+                const position = marker.getLatLng();
+                updateLocationFromMarker([position.lat, position.lng]);
+            });
+        }
+        updateLocationFromMarker([lat, lng]);
+        pendingMarkerCoords = null;
+    }
 }
 
 // Update location fields from marker position
@@ -313,8 +408,9 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
 
     const errorDiv = document.getElementById("error-message");
     errorDiv.innerHTML = "";
-    errorDiv.classList.remove("error-shake");
+    errorDiv.classList.remove("error-shake", "active");
 
+    // Fields
     const title = document.getElementById("title").value;
     const description = document.getElementById("description").value;
     const payment = document.getElementById("payment").value;
@@ -324,62 +420,55 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
     const address = document.getElementById("location_address").value;
     const scheduleRaw = document.getElementById("schedule").value;
 
-    // Required fields
-    if (!title || !description || !payment || !contactRaw || !lat || !lng || !address || !scheduleRaw) {
-        errorDiv.innerHTML = "<div class='error'>All fields are required</div>";
-
-        // shake effect
+    function showError(msg) {
+        errorDiv.innerHTML = msg;
+        errorDiv.classList.add("active");
+        
+        // Restart animation
+        errorDiv.classList.remove("error-shake");
         void errorDiv.offsetWidth;
         errorDiv.classList.add("error-shake");
+    }
 
+    // Required fields
+    if (!title || !description || !payment || !contactRaw || !lat || !lng || !address || !scheduleRaw) {
+        showError("<div class='error'>All fields are required</div>");
         return;
     }
 
-    // Ensure contact contains only digits and meets minimal length
+    // Digits only
     const contact = contactRaw.replace(/\D/g, '');
     if (contact !== contactRaw) {
-        errorDiv.innerHTML = "<div class='error'>Contact number must contain digits only.</div>";
-        void errorDiv.offsetWidth;
-        errorDiv.classList.add("error-shake");
+        showError("<div class='error'>Contact number must contain digits only.</div>");
         return;
     }
 
     if (contact.length < 7) {
-        errorDiv.innerHTML = "<div class='error'>Please enter a valid contact number (at least 7 digits).</div>";
-        void errorDiv.offsetWidth;
-        errorDiv.classList.add("error-shake");
+        showError("<div class='error'>Please enter a valid contact number (at least 7 digits).</div>");
         return;
     }
 
-    // Date check
-    // Validate schedule format: ensure year is 4 digits and date is valid
-    // Typical datetime-local value: YYYY-MM-DDThh:mm (seconds optional on some browsers)
+    // Date validation
     const yearPart = scheduleRaw.substring(0, 4);
     if (!/^[0-9]{4}$/.test(yearPart)) {
-        errorDiv.innerHTML = "<div class='error'>Please use a valid date with a 4-digit year (YYYY). Remove any extra digits from the year.</div>";
-        void errorDiv.offsetWidth;
-        errorDiv.classList.add("error-shake");
+        showError("<div class='error'>Please use a valid date with a 4-digit year (YYYY).</div>");
         return;
     }
 
     const selectedDate = new Date(scheduleRaw);
     const now = new Date();
 
-    // Check for invalid Date (e.g., malformed input)
     if (isNaN(selectedDate.getTime())) {
-        errorDiv.innerHTML = "<div class='error'>The provided schedule is invalid. Please pick a valid date and time.</div>";
-        void errorDiv.offsetWidth;
-        errorDiv.classList.add("error-shake");
+        showError("<div class='error'>The provided schedule is invalid. Please pick a valid date and time.</div>");
         return;
     }
 
     if (selectedDate < now) {
-        errorDiv.innerHTML = "<div class='error'>The selected date and time cannot be in the past</div>";
-        void errorDiv.offsetWidth;
-        errorDiv.classList.add("error-shake");
+        showError("<div class='error'>The selected date and time cannot be in the past</div>");
         return;
     }
 
+    // Payload
     const formData = {
         title,
         description,
@@ -392,17 +481,20 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
     };
 
     try {
-        await api.createTask(formData);
-        alert("Task posted successfully!");
-        window.location.href = "./dashboard.html";
+        if (editMode && editTaskId) {
+            await api.updateTask(editTaskId, formData);
+            alert("Task updated successfully!");
+            window.location.href = `./task-detail.html?id=${editTaskId}`;
+        } else {
+            await api.createTask(formData);
+            alert("Task posted successfully!");
+            window.location.href = "./dashboard.html";
+        }
     } catch (error) {
-        errorDiv.innerHTML = `<div class='error'>Error: ${error.message}</div>`;
-
-        // shake effect
-        void errorDiv.offsetWidth;
-        errorDiv.classList.add("error-shake");
+        showError(`<div class='error'>Error: ${error.message}</div>`);
     }
 });
+
 
 
 

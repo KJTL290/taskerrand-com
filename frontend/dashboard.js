@@ -94,31 +94,56 @@ async function loadDashboardStats() {
 }
 
 async function loadMyTasks() {
+    return loadMyTasksWithFilter(null);
+}
+
+async function loadMyTasksWithFilter(statusFilter = null) {
     try {
         const tasks = await api.getMyTasks();
         const tasksContainer = document.getElementById("my-tasks");
+        // Apply client-side status filter if provided
+        const filteredTasks = statusFilter ? tasks.filter(t => t.status === statusFilter) : tasks;
         
-        if (tasksContainer) {
-            if (tasks.length === 0) {
-                tasksContainer.innerHTML = "<p class='loading'>No tasks yet. <a href='./post-task.html'>Post your first task!</a></p>";
+            if (tasksContainer) {
+            if (filteredTasks.length === 0) {
+                tasksContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>No tasks match the selected filter.</p>
+                    </div>
+                `;
                 return;
             }
             
-            tasksContainer.innerHTML = tasks.map(task => `
+            // Fetch poster names and render tasks with creator shown
+            const rendered = await Promise.all(filteredTasks.map(async (task) => {
+                let posterName = 'Unknown';
+                try { const u = await api.getUser(task.poster_id); posterName = u.name || u.email || posterName; } catch(e) {}
+                return `
                 <div class="task-card" onclick="window.location.href='./task-detail.html?id=${task.id}'">
-                    <h3>${task.title}</h3>
-                    <p>${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</p>
+                    <a></a>
+                    <h3>Task: ${task.title}</h3>
+                    <div class="task-creator">Created by: ${posterName}</div>
+                    <p>Description: ${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}</p>
                     <div class="task-meta">
-                        <span class="task-status status-${task.status}">${task.status.replace('_', ' ')}</span>
-                        <span><strong>₱${task.payment.toFixed(2)}</strong></span>
+                        <span style="display: block" class="task-status status-${task.status}">Status: ${task.status.replace('_', ' ')}</span>
+                        <span><strong>Payment: ₱${task.payment.toFixed(2)}</strong></span>
                     </div>
+                    <a></a>
                 </div>
-            `).join('');
+            `;
+            }));
+
+            tasksContainer.innerHTML = rendered.join('');
         }
     } catch (error) {
         console.error("Error loading tasks:", error);
     }
 }
+
+window.filterMyTasks = function() {
+    const filter = document.getElementById('my-task-filter').value;
+    loadMyTasksWithFilter(filter || null);
+};
 
 // Logout button event
 const logoutBtn = document.getElementById("google-logout-btn-id");
@@ -129,3 +154,10 @@ if (logoutBtn) {
         });
     });
 }
+
+
+
+
+
+
+

@@ -117,5 +117,14 @@ export const api = {
     })
 };
 
+// Search tasks by title (server-side substring match) with optional status filter
+api.searchTasks = (query, statusFilter = null) => {
+    const parts = [];
+    if (query) parts.push(`query=${encodeURIComponent(query)}`);
+    if (statusFilter) parts.push(`status_filter=${encodeURIComponent(statusFilter)}`);
+    const params = parts.length ? `?${parts.join("&")}` : "";
+    return apiRequest(`/api/tasks/search${params}`);
+};
+
 export { auth };
 
