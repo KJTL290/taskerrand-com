@@ -8,5 +8,6 @@ footer{
     align-items: center;
 }
 p{
+    display: block;
     margin: 0;
 }
