@@ -25,9 +25,9 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        /* Solo buttons: normal sizing */
         #action-buttons.actions-wrapper .btn {
-            flex: 0 1 auto;
+            flex: 1 1 0;
+            min-width: 120px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -37,12 +37,7 @@
             border-radius: 8px;
             font-weight: 600;
         }
-        /* Multiple buttons: apply min-width constraints to prevent wrapping */
-        #action-buttons.actions-wrapper .btn:nth-child(n+2) {
-            flex: 1 1 0;
-            min-width: 120px;
-        }
-        #action-buttons.actions-wrapper .btn-primary:nth-child(n+2) {
+        #action-buttons.actions-wrapper .btn-primary {
             min-width: 140px;
         }
         /* On very small screens, stack buttons full-width and allow wrapping */
@@ -51,10 +46,8 @@
                 flex-direction: column;
                 align-items: stretch;
             }
-            #action-buttons.actions-wrapper .btn,
-            #action-buttons.actions-wrapper .btn:nth-child(n+2) {
+            #action-buttons.actions-wrapper .btn {
                 width: 100%;
-                flex: 1 1 100%;
                 min-width: unset;
                 white-space: normal;
                 padding: 10px 14px;
