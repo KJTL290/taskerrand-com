@@ -444,6 +444,13 @@ async def admin_delete_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # Delete any reports related to this task first to avoid FK constraint issues
+    try:
+        db.query(TaskReport).filter(TaskReport.task_id == task_id).delete(synchronize_session=False)
+    except Exception:
+        # If deletion of reports fails for any reason, continue to attempt deleting the task
+        pass
+
     db.delete(task)
     db.commit()
     return None
@@ -462,6 +469,10 @@ async def create_report(
         raise HTTPException(status_code=404, detail="Task not found")
     
     # Create report
+    # Prevent users from reporting their own tasks
+    if task.poster_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot report your own task")
+
     db_report = TaskReport(
         task_id=report.task_id,
         reporter_id=current_user.id,

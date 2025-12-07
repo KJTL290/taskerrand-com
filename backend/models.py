@@ -47,6 +47,8 @@ class Task(Base):
     seeker = relationship("User", foreign_keys=[seeker_id], back_populates="accepted_tasks")
     messages = relationship("Message", back_populates="task", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="task", uselist=False, cascade="all, delete-orphan")
+    # Reports associated with this task; deleted when task is deleted
+    reports = relationship("TaskReport", back_populates="task", cascade="all, delete-orphan")
 
 class Message(Base):
     __tablename__ = "messages"
@@ -89,5 +91,5 @@ class TaskReport(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    task = relationship("Task")
+    task = relationship("Task", back_populates="reports")
     reporter = relationship("User")

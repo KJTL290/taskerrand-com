@@ -44,6 +44,19 @@ onAuthStateChanged(auth, async (user) => {
                 adminLink.style.display = "block";
             }
         }
+        // Prevent reporting your own task: fetch task and hide form if poster
+        if (taskId) {
+            try {
+                const task = await api.getTask(taskId);
+                if (task && String(task.poster_id) === String(userData.id)) {
+                    const form = document.getElementById('report-form');
+                    if (form) form.style.display = 'none';
+                    showMessage("You cannot report your own task.", "error");
+                }
+            } catch (e) {
+                // ignore; task might not be accessible to this user
+            }
+        }
     } catch (error) {
         console.error("Error loading user data:", error);
     }

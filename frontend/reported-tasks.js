@@ -116,9 +116,9 @@ async function displayReports() {
                 ` : `<div class="error" style="margin-bottom: 1rem;">Task details not available</div>`}
 
                 <div class="report-actions">
-                    ${taskData ? `<button class="btn-view hover-btn" onclick="viewTask(${report.task_id})">View Full Task</button>` : ''}
-                    ${taskData ? `<button class="btn-delete-task hover-btn" onclick="deleteTask(${report.task_id}, ${report.id})">Delete Task</button>` : ''}
-                    <button class="btn-dismiss hover-btn" onclick="dismissReport(${report.id})">Dismiss Report</button>
+                    ${taskData ? `<button class="btn-view" onclick="viewTask(${report.task_id})">View Full Task</button>` : ''}
+                    ${taskData ? `<button class="btn-delete-task" onclick="deleteTask(${report.task_id}, ${report.id})">Delete Task</button>` : ''}
+                    <button class="btn-dismiss" onclick="dismissReport(${report.id})">Dismiss Report</button>
                 </div>
             </div>
         `;

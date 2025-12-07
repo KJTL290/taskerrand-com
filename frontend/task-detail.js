@@ -145,7 +145,7 @@ function displayTask() {
         <div style="position: relative; margin-top: 1rem;">
             <div id="map" style="width: 100%; height: 300px; border-radius: 6px;"></div>
             <!-- Report button placed as an overlay on the right side of the map -->
-            <button id="report-task-btn" class="hover-btn side-report-btn" style="position: absolute; top: 12px; right: 12px; padding: 8px 12px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; z-index: 1000;">
+            <button id="report-task-btn" class="side-report-btn" style="position: absolute; top: 12px; right: 12px; padding: 8px 12px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; z-index: 1000;">
                 Report This Task
             </button>
         </div>
