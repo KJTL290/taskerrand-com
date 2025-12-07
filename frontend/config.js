@@ -9,10 +9,10 @@ export const firebaseConfig = {
 };
 
 // Backend API URL - change this to your backend URL
-//export const API_URL = "http://localhost:8000";
+export const API_URL = "http://localhost:8000";
 
 // database for taskerrand.netlify.app or the https://github.com/Cris-Allen-O/taskerrand repo
-export const API_URL = "https://taskerrand.onrender.com";
+//export const API_URL = "https://taskerrand.onrender.com";
 
 // database for taskerrand-com.netlify.app or the https://github.com/neowarsia/taskerrand-com repo
 // export const API_URL = "https://taskerrand-com.onrender.com";

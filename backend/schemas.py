@@ -130,6 +130,8 @@ class TaskReportResponse(TaskReportBase):
 # Notification Schemas
 class NotificationBase(BaseModel):
     task_id: Optional[int] = None
+    title: str
+    message: str
     notif_type: str
 
 

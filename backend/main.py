@@ -7,11 +7,11 @@ from typing import List, Optional
 from datetime import datetime
 
 from database import SessionLocal, engine, Base
-from models import User, Task, Message, Feedback, TaskReport
+from models import User, Task, Message, Feedback, TaskReport, Notification
 from schemas import (
     UserCreate, UserResponse, TaskCreate, TaskUpdate, TaskResponse,
     MessageCreate, MessageResponse, FeedbackCreate, FeedbackResponse,
-    TaskReportCreate, TaskReportResponse
+    TaskReportCreate, TaskReportResponse, NotificationResponse
 )
 from auth import verify_firebase_token, get_current_user
 
@@ -66,6 +66,20 @@ async def get_current_user_db(
         db.refresh(user)
     
     return user
+
+    return user
+
+# Helper function to create notification
+def create_notification(db: Session, user_id: int, title: str, message: str, notif_type: str, task_id: Optional[int] = None):
+    notification = Notification(
+        user_id=user_id,
+        task_id=task_id,
+        title=title,
+        message=message,
+        notif_type=notif_type
+    )
+    db.add(notification)
+    db.commit()
 
 # ==================== USER ENDPOINTS ====================
 
@@ -216,6 +230,17 @@ async def accept_task(
     
     db.commit()
     db.refresh(task)
+    
+    # Notify poster
+    create_notification(
+        db, 
+        task.poster_id, 
+        "Task Accepted", 
+        f"Your task '{task.title}' has been accepted by {current_user.name or current_user.email}.", 
+        "task_update", 
+        task.id
+    )
+    
     return task
 
 @app.post("/api/tasks/{task_id}/complete", response_model=TaskResponse)
@@ -239,6 +264,17 @@ async def complete_task(
     
     db.commit()
     db.refresh(task)
+    
+    # Notify poster
+    create_notification(
+        db, 
+        task.poster_id, 
+        "Task Completed", 
+        f"Your task '{task.title}' has been marked as completed. Please confirm.", 
+        "task_update", 
+        task.id
+    )
+    
     return task
 
 @app.post("/api/tasks/{task_id}/confirm", response_model=TaskResponse)
@@ -263,6 +299,18 @@ async def confirm_task(
     
     db.commit()
     db.refresh(task)
+    
+    # Notify seeker
+    if task.seeker_id:
+        create_notification(
+            db, 
+            task.seeker_id, 
+            "Task Confirmed", 
+            f"The completion of task '{task.title}' has been confirmed. Payment should be released.", 
+            "task_update", 
+            task.id
+        )
+    
     return task
 
 @app.post("/api/tasks/{task_id}/cancel", response_model=TaskResponse)
@@ -299,6 +347,28 @@ async def cancel_task(
     
     db.commit()
     db.refresh(task)
+    
+    # Notify other party if applicable
+    if task.status == "cancelled":
+        if current_user.id == task.poster_id and task.seeker_id:
+            create_notification(
+                db, 
+                task.seeker_id, 
+                "Task Cancelled", 
+                f"The task '{task.title}' has been cancelled by the poster.", 
+                "task_update", 
+                task.id
+            )
+        elif current_user.id == task.seeker_id and task.poster_id:
+             create_notification(
+                db, 
+                task.poster_id, 
+                "Task Cancelled", 
+                f"The task '{task.title}' has been cancelled by the seeker.", 
+                "task_update", 
+                task.id
+            )
+
     return task
 
 @app.get("/api/users/me/tasks", response_model=List[TaskResponse])
@@ -340,6 +410,19 @@ async def create_message(
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
+    
+    # Notify recipient
+    recipient_id = task.poster_id if current_user.id == task.seeker_id else task.seeker_id
+    if recipient_id:
+        create_notification(
+            db, 
+            recipient_id, 
+            "New Message", 
+            f"You have a new message regarding task '{task.title}'.", 
+            "message", 
+            task.id
+        )
+    
     return db_message
 
 @app.get("/api/tasks/{task_id}/messages", response_model=List[MessageResponse])
@@ -532,6 +615,32 @@ async def delete_report(
     db.commit()
     return None
 
+
+# ==================== NOTIFICATION ENDPOINTS ====================
+
+@app.get("/api/notifications", response_model=List[NotificationResponse])
+async def get_notifications(
+    current_user: User = Depends(get_current_user_db),
+    db: Session = Depends(get_db)
+):
+    return db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.created_at.desc()).all()
+
+@app.put("/api/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT)
+async def mark_notification_read(
+    notification_id: int,
+    current_user: User = Depends(get_current_user_db),
+    db: Session = Depends(get_db)
+):
+    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    if notification.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    notification.seen = True
+    db.commit()
+    return None
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)

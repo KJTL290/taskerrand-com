@@ -20,17 +20,17 @@ async function apiRequest(endpoint, options = {}) {
     const token = await getAuthToken();
     console.log("DEBUG: Token obtained (first 20 chars):", token.substring(0, 20) + "...");
     const url = `${API_URL}${endpoint}`;
-    
+
     const defaultOptions = {
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
         }
     };
-    
+
     console.log("DEBUG: Making request to:", url);
     console.log("DEBUG: Authorization header:", `Bearer ${token.substring(0, 20)}...`);
-    
+
     const response = await fetch(url, {
         ...defaultOptions,
         ...options,
@@ -39,16 +39,16 @@ async function apiRequest(endpoint, options = {}) {
             ...(options.headers || {})
         }
     });
-    
+
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: response.statusText }));
         throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
-    
+
     if (response.status === 204) {
         return null;
     }
-    
+
     return await response.json();
 }
 
@@ -57,7 +57,7 @@ export const api = {
     // User endpoints
     getCurrentUser: () => apiRequest("/api/users/me"),
     getUser: (userId) => apiRequest(`/api/users/${userId}`),
-    
+
     // Task endpoints
     getTasks: (statusFilter = null) => {
         const params = statusFilter ? `?status_filter=${statusFilter}` : "";
@@ -91,21 +91,21 @@ export const api = {
         const params = taskType ? `?task_type=${taskType}` : "";
         return apiRequest(`/api/users/me/tasks${params}`);
     },
-    
+
     // Message endpoints
     getTaskMessages: (taskId) => apiRequest(`/api/tasks/${taskId}/messages`),
     sendMessage: (taskId, content) => apiRequest("/api/messages", {
         method: "POST",
         body: JSON.stringify({ task_id: taskId, content })
     }),
-    
+
     // Feedback endpoints
     createFeedback: (taskId, seekerId, rating, comment) => apiRequest("/api/feedback", {
         method: "POST",
         body: JSON.stringify({ task_id: taskId, seeker_id: seekerId, rating, comment })
     }),
     getUserFeedback: (userId) => apiRequest(`/api/users/${userId}/feedback`),
-    
+
     // Admin endpoints
     getAllUsers: () => apiRequest("/api/admin/users"),
     getAllTasks: (statusFilter = null) => {
@@ -115,7 +115,7 @@ export const api = {
     adminDeleteTask: (taskId) => apiRequest(`/api/admin/tasks/${taskId}`, {
         method: "DELETE"
     }),
-    
+
     // Report endpoints
     createReport: (taskId, reportType, description) => apiRequest("/api/reports", {
         method: "POST",
@@ -125,6 +125,12 @@ export const api = {
     getReport: (reportId) => apiRequest(`/api/reports/${reportId}`),
     deleteReport: (reportId) => apiRequest(`/api/reports/${reportId}`, {
         method: "DELETE"
+    }),
+
+    // Notification endpoints
+    getNotifications: () => apiRequest("/api/notifications"),
+    markNotificationRead: (notificationId) => apiRequest(`/api/notifications/${notificationId}/read`, {
+        method: "PUT"
     })
 };
 

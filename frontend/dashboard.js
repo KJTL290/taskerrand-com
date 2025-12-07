@@ -16,14 +16,14 @@ onAuthStateChanged(auth, async (user) => {
         window.location.href = "./index.html";
         return;
     }
-    
+
     currentUser = user;
-    
+
     try {
         // Get user data from backend
         userData = await api.getCurrentUser();
         displayUserInfo(user, userData);
-        
+
         // Show admin link if user is admin
         if (userData.is_admin) {
             const adminLink = document.getElementById("admin-link");
@@ -31,9 +31,10 @@ onAuthStateChanged(auth, async (user) => {
                 adminLink.style.display = "block";
             }
         }
-        
+
         loadDashboardStats();
         loadMyTasks();
+        loadNotifications();
     } catch (error) {
         console.error("Error loading user data:", error);
         displayUserInfo(user, null);
@@ -43,11 +44,11 @@ onAuthStateChanged(auth, async (user) => {
 function displayUserInfo(user, userData) {
     const usernameEl = document.getElementById("username");
     const profileEl = document.getElementById("profile");
-    
+
     if (usernameEl) {
         usernameEl.textContent = `Welcome, ${user.displayName || user.email}!`;
     }
-    
+
     if (profileEl) {
         profileEl.src = user.photoURL || "";
         profileEl.alt = user.displayName || "Profile";
@@ -57,14 +58,14 @@ function displayUserInfo(user, userData) {
 async function loadDashboardStats() {
     try {
         const tasks = await api.getMyTasks();
-        
+
         const stats = {
             posted: tasks.filter(t => t.poster_id === userData.id).length,
             accepted: tasks.filter(t => t.seeker_id === userData.id).length,
             completed: tasks.filter(t => t.status === "completed" && t.seeker_id === userData.id).length,
             active: tasks.filter(t => t.status === "ongoing" || t.status === "pending_confirmation").length
         };
-        
+
         const statsContainer = document.getElementById("stats");
         if (statsContainer) {
             statsContainer.innerHTML = `
@@ -103,8 +104,8 @@ async function loadMyTasksWithFilter(statusFilter = null) {
         const tasksContainer = document.getElementById("my-tasks");
         // Apply client-side status filter if provided
         const filteredTasks = statusFilter ? tasks.filter(t => t.status === statusFilter) : tasks;
-        
-            if (tasksContainer) {
+
+        if (tasksContainer) {
             if (filteredTasks.length === 0) {
                 tasksContainer.innerHTML = `
                     <div class="empty-state">
@@ -113,11 +114,11 @@ async function loadMyTasksWithFilter(statusFilter = null) {
                 `;
                 return;
             }
-            
+
             // Fetch poster names and render tasks with creator shown
             const rendered = await Promise.all(filteredTasks.map(async (task) => {
                 let posterName = 'Unknown';
-                try { const u = await api.getUser(task.poster_id); posterName = u.name || u.email || posterName; } catch(e) {}
+                try { const u = await api.getUser(task.poster_id); posterName = u.name || u.email || posterName; } catch (e) { }
                 return `
                 <div class="task-card" onclick="window.location.href='./task-detail.html?id=${task.id}'">
                     <a></a>
@@ -140,7 +141,7 @@ async function loadMyTasksWithFilter(statusFilter = null) {
     }
 }
 
-window.filterMyTasks = function() {
+window.filterMyTasks = function () {
     const filter = document.getElementById('my-task-filter').value;
     loadMyTasksWithFilter(filter || null);
 };
@@ -161,3 +162,105 @@ if (logoutBtn) {
 
 
 
+// Notification Logic
+async function loadNotifications() {
+    try {
+        const notifications = await api.getNotifications();
+        const notificationList = document.getElementById("notification-list");
+        const notificationBadge = document.getElementById("notification-badge");
+
+        if (!notificationList) return;
+
+        // Update badge
+        const unreadCount = notifications.filter(n => !n.seen).length;
+        if (notificationBadge) {
+            notificationBadge.textContent = unreadCount;
+            notificationBadge.style.display = unreadCount > 0 ? "block" : "none";
+        }
+
+        if (notifications.length === 0) {
+            notificationList.innerHTML = '<div class="notification-empty">No notifications</div>';
+            return;
+        }
+
+        notificationList.innerHTML = notifications.map(n => `
+            <div class="notification-item ${n.seen ? '' : 'unread'}" onclick="handleNotificationClick(${n.id}, ${n.task_id}, ${n.seen})">
+                <div class="notification-title">${n.title}</div>
+                <div class="notification-message">${n.message}</div>
+                <div class="notification-time">${new Date(n.created_at).toLocaleString()}</div>
+                <div class="notification-actions" onclick="event.stopPropagation();">
+                    ${n.task_id ? `<button class="notification-view-btn" onclick="handleNotificationView(${n.id}, ${n.task_id}, ${n.seen})">View</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error("Error loading notifications:", error);
+    }
+}
+
+window.handleNotificationClick = async function (notificationId, taskId, seen) {
+    try {
+        if (!seen) {
+            await api.markNotificationRead(notificationId);
+        }
+
+        // Close the notification dropdown
+        const dropdown = document.getElementById("notification-dropdown");
+        if (dropdown) {
+            dropdown.classList.remove("show");
+        }
+
+        if (taskId) {
+            window.location.href = `./task-detail.html?id=${taskId}`;
+        } else {
+            // Just reload notifications to update UI if no task link
+            loadNotifications();
+        }
+    } catch (error) {
+        console.error("Error handling notification click:", error);
+    }
+};
+
+window.handleNotificationView = async function (notificationId, taskId, seen) {
+    try {
+        if (!seen) {
+            await api.markNotificationRead(notificationId);
+        }
+
+        // Close the notification dropdown
+        const dropdown = document.getElementById("notification-dropdown");
+        if (dropdown) {
+            dropdown.classList.remove("show");
+        }
+
+        // Navigate to the task detail page
+        window.location.href = `./task-detail.html?id=${taskId}`;
+    } catch (error) {
+        console.error("Error handling notification view:", error);
+    }
+};
+
+// Notification bell event listener
+document.addEventListener("DOMContentLoaded", () => {
+    const bell = document.getElementById("notification-bell");
+    const dropdown = document.getElementById("notification-dropdown");
+
+    if (bell && dropdown) {
+        bell.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle("show");
+        });
+
+        // Close dropdown when clicking outside
+        window.addEventListener("click", () => {
+            if (dropdown.classList.contains("show")) {
+                dropdown.classList.remove("show");
+            }
+        });
+
+        dropdown.addEventListener("click", (e) => {
+            e.stopPropagation();
+        });
+    }
+});
