@@ -144,7 +144,7 @@ async function deleteTask(taskId, reportId) {
     try {
         await api.adminDeleteTask(taskId);
         alert("Task deleted successfully");
-        await dismissReport(reportId);
+      //  await dismissReport(reportId);
     } catch (error) {
         alert("Error deleting task: " + error.message);
     }
