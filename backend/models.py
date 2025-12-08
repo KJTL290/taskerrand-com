@@ -7,11 +7,11 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    firebase_uid = Column(String(128), unique=True, index=True, nullable=False)
-    email = Column(String(190), unique=True, index=True, nullable=False)
-    name = Column(String(190), nullable=True)
-    photo_url = Column(String(255), nullable=True)
-    phone = Column(String(64), nullable=True)
+    firebase_uid = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=True)
+    photo_url = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -27,15 +27,15 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False)
+    title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     payment = Column(Float, nullable=False)
-    contact_number = Column(String(64), nullable=True)
+    contact_number = Column(String, nullable=True)
     location_lat = Column(Float, nullable=False)
     location_lng = Column(Float, nullable=False)
-    location_address = Column(String(255), nullable=True)
+    location_address = Column(String, nullable=True)
     schedule = Column(DateTime, nullable=True)
-    status = Column(String(40), default="available")  # available, ongoing, pending_confirmation, completed, cancelled
+    status = Column(String, default="available")  # available, ongoing, pending_confirmation, completed, cancelled
     poster_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     seeker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     accepted_at = Column(DateTime, nullable=True)
@@ -87,7 +87,7 @@ class TaskReport(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    report_type = Column(String(50), nullable=False)  # fraudulent, illegal, inappropriate, other
+    report_type = Column(String, nullable=False)  # fraudulent, illegal, inappropriate, other
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -101,9 +101,9 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
-    title = Column(String(255), nullable=False)
+    title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
-    notif_type = Column(String(50), nullable=False) # message, task_update, system
+    notif_type = Column(String, nullable=False) # message, task_update, system
     seen = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
